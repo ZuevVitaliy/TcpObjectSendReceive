@@ -17,10 +17,17 @@ namespace TcpObjectSender
 
             await tcpClient.ConnectAsync(Constants.HOSTNAME, 8888);
 
-            var testPerson = new Person { Name = "Павел", BirthDate = new DateTime(1988, 10, 28) };
-            await SendObjectAsync(tcpClient, testPerson);
-            var testPet = new Pet { Name = "Мухтар", PetType = PetType.Dog };
-            await SendObjectAsync(tcpClient, testPet);
+            while (true)
+            {
+                var testPerson = new Person { Name = "Павел", BirthDate = new DateTime(1988, 10, 28) };
+                await SendObjectAsync(tcpClient, testPerson);
+                Console.WriteLine("Передан " + testPerson);
+                var testPet = new Pet { Name = "Мухтар", PetType = PetType.Dog };
+                await SendObjectAsync(tcpClient, testPet);
+                Console.WriteLine("Передан " + testPet);
+
+            }
+            
 
             Console.ReadLine();
         }

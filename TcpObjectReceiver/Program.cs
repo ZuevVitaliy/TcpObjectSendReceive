@@ -8,7 +8,7 @@ namespace TcpObjectReceiver
 {
     internal class Program
     {
-        private static Queue<string> _messagesQueue = new Queue<string>();
+        private static MessagesReceiveHelper _receiveHelper = new MessagesReceiveHelper();
 
         static async Task Main(string[] args)
         {
@@ -26,7 +26,8 @@ namespace TcpObjectReceiver
             while (true)
             {
                 var obj = await ReceiveObject(tcpClient);
-                Console.WriteLine(obj?.ToString());
+                if(obj != null)
+                    Console.WriteLine(obj.ToString());
             }
         }
 
@@ -35,9 +36,9 @@ namespace TcpObjectReceiver
             var objectMessages = new List<string>();
             while (objectMessages.Count < 2)
             {
-                if (_messagesQueue.Count > 0)
-                    objectMessages.Add(_messagesQueue.Dequeue());
-                Thread.Sleep(1000);
+                var message = _receiveHelper.GetFullMessage();
+                if(!string.IsNullOrEmpty(message))
+                    objectMessages.Add(message);
             }
             string typeString = objectMessages[0];
             var type = JsonConvert.DeserializeObject<Type>(typeString);
@@ -49,18 +50,21 @@ namespace TcpObjectReceiver
 
         private static async Task ReceiveMessage(TcpClient tcpClient)
         {
-            var stream = tcpClient.GetStream();
-            var builder = new StringBuilder();
-            byte[] buffer = new byte[256];
-
-            do
+            while (true)
             {
-                int bytes = await stream.ReadAsync(buffer, 0, buffer.Length);
-                string addingText = Encoding.UTF8.GetString(buffer, 0, bytes);
-                builder.Append(addingText);
-            } while (stream.DataAvailable);
+                var stream = tcpClient.GetStream();
+                var builder = new StringBuilder();
+                byte[] buffer = new byte[256];
 
-            _messagesQueue.Enqueue(builder.ToString());
+                do
+                {
+                    int bytes = await stream.ReadAsync(buffer, 0, buffer.Length);
+                    string addingText = Encoding.UTF8.GetString(buffer, 0, bytes);
+                    builder.Append(addingText);
+                } while (stream.DataAvailable);
+
+                _receiveHelper.AddMessage(builder.ToString());
+            }
         }
     }
 }
