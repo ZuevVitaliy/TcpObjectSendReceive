@@ -8,8 +8,6 @@ namespace TcpObjectReceiver
 {
     internal class Program
     {
-        private static MessagesReceiveHelper _receiveHelper = new MessagesReceiveHelper();
-
         static async Task Main(string[] args)
         {
             var tcpListener = new TcpListener(IPAddress.Parse(Constants.HOSTNAME), 8888);
@@ -17,26 +15,30 @@ namespace TcpObjectReceiver
 
             using var tcpClient = await tcpListener.AcceptTcpClientAsync();
 
-            Task.Run(() => ReceiveMessage(tcpClient));
-            await ReceiveObjectsTask(tcpClient);
+            await ReceiveObjectsTaskRun(tcpClient);
         }
 
-        private static async Task ReceiveObjectsTask(TcpClient tcpClient)
+        private static async Task ReceiveObjectsTaskRun(TcpClient tcpClient)
         {
-            while (true)
+            var messagesHelper = new MessagesReceiveHelper();
+            ReceiveMessagesAsync(tcpClient, messagesHelper);
+            await Task.Run(() =>
             {
-                var obj = await ReceiveObject(tcpClient);
-                if(obj != null)
-                    Console.WriteLine(obj.ToString());
-            }
+                while (true)
+                {
+                    var obj = ReceiveObject(tcpClient, messagesHelper);
+                    if (obj != null)
+                        Console.WriteLine(obj.ToString());
+                }
+            });
         }
 
-        private static async Task<object> ReceiveObject(TcpClient tcpClient)
+        private static object ReceiveObject(TcpClient tcpClient, MessagesReceiveHelper messagesHelper)
         {
             var objectMessages = new List<string>();
             while (objectMessages.Count < 2)
             {
-                var message = _receiveHelper.GetFullMessage();
+                var message = messagesHelper.GetFullMessage();
                 if(!string.IsNullOrEmpty(message))
                     objectMessages.Add(message);
             }
@@ -48,7 +50,7 @@ namespace TcpObjectReceiver
             return obj;
         }
 
-        private static async Task ReceiveMessage(TcpClient tcpClient)
+        private static async Task ReceiveMessagesAsync(TcpClient tcpClient, MessagesReceiveHelper messagesHelper)
         {
             while (true)
             {
@@ -63,7 +65,7 @@ namespace TcpObjectReceiver
                     builder.Append(addingText);
                 } while (stream.DataAvailable);
 
-                _receiveHelper.AddMessage(builder.ToString());
+                messagesHelper.AddMessage(builder.ToString());
             }
         }
     }
